@@ -12,7 +12,7 @@ class Truck:
     
     def is_full(self):
         if(self.current_battery >= self.battery_capacity):
-            print(f"Truck full. Battery capacity: {self.battery_capacity} Total charge: {self.current_battery}")
+            #print(f"Truck full. Battery capacity: {self.battery_capacity} Total charge: {self.current_battery}")
             return True
         return False
 
@@ -142,8 +142,8 @@ def main():
                 # Calculamos la carga efectiva
                 if(inductive):
                     charge_power_isleta = charge_power_isleta*0.7
-                if(charge_power_isleta < max_speed_truck):
-                    effective_charge = charge_power_isleta
+
+                effective_charge = min(charge_power_isleta, max_speed_truck)
 
                 truck_charge = truck.get_charge(effective_charge, t_increment, t_multiplier)
                 truck.add_charge(truck_charge)
