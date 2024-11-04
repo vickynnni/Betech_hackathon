@@ -13,8 +13,8 @@ class Truck:
     def is_full(self):
         return self.current_battery >= self.battery_capacity
 
-    def charge(self, charge_power, time):
-        power_supplied = charge_power*time
+    def charge(self, charge_power, time_increment):
+        power_supplied = charge_power*time_increment
         self.current_battery += power_supplied
         return power_supplied
 
@@ -83,7 +83,7 @@ def main():
     trucks = get_trucks(100)
     
     t=0 # Tiempo s
-    t_multiplier = 1/3600
+    t_multiplier = 1
     finished=False
     # Proceso principal
     #Ordenar por menor capacidad de batería
@@ -109,7 +109,7 @@ def main():
 
     # Bucle principal
     while(not finished):
-        t += t_increment
+        
         free_space=True
         #Cargar los camiones
         for isleta in isletas:
@@ -144,9 +144,10 @@ def main():
                 isleta.occupy(trucks_ordered[0])
                 trucks_ordered.pop(0)
                 continue
+        t += t_increment
         
 
-    print(f"Tiempo: {t*t_multiplier} h, Potencia total suministrada: {total_power_supplied} kW")
+    print(f"Tiempo: {t*t_multiplier} h, Potencia total suministrada: {total_power_supplied*t_multiplier} kW")
         
 
 
