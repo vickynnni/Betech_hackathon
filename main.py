@@ -100,7 +100,7 @@ def main():
     # Proceso principal
     finished=False
     #Ordenar por menor capacidad de batería
-    trucks_ordered = sorted(trucks, key=lambda x: x.charging_speed, reverse=False)
+    trucks_ordered = sorted(trucks, key=lambda x: x.battery_capacity/x.charging_speed, reverse=True)
    
     # Variable para contar la energía que acaban recibiendo los camiones. 
     # Debería ser igual a la suma de las capacidades de los camiones
