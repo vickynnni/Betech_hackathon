@@ -13,9 +13,12 @@ class Truck:
     def is_full(self):
         return self.current_battery >= self.battery_capacity
 
-    def charge(self, charge_power, time_increment):
-        power_supplied = charge_power*time_increment
-        self.current_battery += power_supplied
+    def add_charge(self, charge_power):
+        self.current_battery += charge_power
+
+    def get_charge(self, charge_power, time_increment, t_multiplier):
+        power_supplied = charge_power*time_increment*t_multiplier
+        #self.current_battery += power_supplied
         return power_supplied
 
 class GrupoIsleta:
@@ -83,7 +86,7 @@ def main():
     trucks = get_trucks(100)
     
     t=0 # Tiempo s
-    t_multiplier = 1
+    t_multiplier = 1/3600 # Para pasar de segundos a horas
     finished=False
     # Proceso principal
     #Ordenar por menor capacidad de batería
@@ -91,7 +94,8 @@ def main():
     # for t in trucks_ordered:
     #     print(str(t))
     t_increment = 1
-    total_power_supplied = 0 #(kW*time)
+    total_power_supplied_to_trucks = 0 #(kW*time)
+    total_power_supplied = 0
 
     total_charging_power = 0
     for truck in trucks_ordered:
@@ -120,13 +124,17 @@ def main():
                 charge_power_isleta = isleta.charge_power
                 inductive = check_inductiva(truck, isleta)
                 effective_charge = max_speed_truck
+
+                total_power_supplied += truck.get_charge(effective_charge, t_increment, t_multiplier)
                 # Calculamos la carga efectiva
                 if(inductive):
                     charge_power_isleta = charge_power_isleta*0.7
                 if(charge_power_isleta < max_speed_truck):
                     effective_charge = charge_power_isleta
 
-                total_power_supplied += truck.charge(effective_charge, t_increment)
+                truck_charge = truck.get_charge(effective_charge, t_increment, t_multiplier)
+                truck.add_charge(truck_charge)
+                total_power_supplied_to_trucks += truck_charge
                 if(truck.is_full()):
                     trucks_isleta_new = trucks_isleta.remove(truck)
             trucks_isleta = trucks_isleta_new
@@ -147,7 +155,7 @@ def main():
         t += t_increment
         
 
-    print(f"Tiempo: {t*t_multiplier} h, Potencia total suministrada: {total_power_supplied*t_multiplier} kW")
+    print(f"Tiempo: {t*t_multiplier} h, Potencia total suministrada desde isletas: {total_power_supplied} kW, Potencia total suministrada a camiones: {total_power_supplied_to_trucks} kW")
         
 
 
