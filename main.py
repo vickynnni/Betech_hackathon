@@ -11,7 +11,10 @@ class Truck:
         return f"Truck: Battery Capacity - {self.battery_capacity}, Charging Ports - {', '.join(self.charging_ports)}, Charging Speed - {self.charging_speed}"
     
     def is_full(self):
-        return self.current_battery >= self.battery_capacity
+        if(self.current_battery >= self.battery_capacity):
+            print(f"Truck full. Battery capacity: {self.battery_capacity} Total charge: {self.current_battery}")
+            return True
+        return False
 
     def add_charge(self, charge_power):
         self.current_battery += charge_power
@@ -75,6 +78,12 @@ def check_inductiva(truck: Truck, isleta: GrupoIsleta):
         return True
     return False
 
+def check_no_truck_isleta(isletas):
+    for isleta in isletas:
+        if(isleta.get_free_spaces() < isleta.n_isletas):
+            return False
+    return True
+
 def main():
     # Construir estructuras
     [truck1, truck2] = [Truck(100, ['top', 'right'], 50), Truck(200, ['top', 'left'], 100)]
@@ -83,7 +92,7 @@ def main():
     isletas.append(GrupoIsleta(7, 150, ['right', 'top']))
     isletas.append(GrupoIsleta(3, 110, ['top', 'inductive']))
     isletas.append(GrupoIsleta(5, 60, ['left','top','inductive']))
-    trucks = get_trucks(100)
+    trucks = get_trucks(200)
     
     t=0 # Tiempo s
     t_multiplier = 1/3600 # Para pasar de segundos a horas
@@ -100,19 +109,28 @@ def main():
     total_charging_power = 0
     for truck in trucks_ordered:
         total_charging_power += truck.battery_capacity
+
     print(f"Total charging power: {total_charging_power} kWh")
+    print(f"Total trucks: {len(trucks_ordered)}")
+
+    truck_count = 0
 
     #Rellenar isletas vacías
     for isleta in isletas:
-            if(isleta.get_free_spaces() == 0):
-                continue
-            if(check_truck_isleta(trucks_ordered[0],isleta)):
-                isleta.occupy(trucks_ordered[0])
-                trucks_ordered.pop(0)
-                continue
+            i = 0
+            while(isleta.get_free_spaces() != 0):
+                if(check_truck_isleta(trucks_ordered[i],isleta)):
+                    isleta.occupy(trucks_ordered[i])
+                    trucks_ordered.pop(i)
+                    truck_count += 1
+                    i += 1
+                    continue
+                else:
+                    i += 1
+                    continue
 
     # Bucle principal
-    while(not finished):
+    while(True):
         
         free_space=True
         #Cargar los camiones
@@ -140,21 +158,32 @@ def main():
             trucks_isleta = trucks_isleta_new
 
         
-        # Rellenar isletas vacías
+        #Rellenar isletas vacías
         for isleta in isletas:
-            #Comprobar si se han cargado todos los camiones
-            if(len(trucks_ordered)==0):
-                finished=True
-                break
-            if(isleta.get_free_spaces() == 0):
-                continue
-            if(check_truck_isleta(trucks_ordered[0], isleta)):
-                isleta.occupy(trucks_ordered[0])
-                trucks_ordered.pop(0)
-                continue
+            i = 0
+            while(isleta.get_free_spaces() != 0):
+                if(i>=len(trucks_ordered)):
+                    break
+                if(check_truck_isleta(trucks_ordered[i],isleta)):
+                    isleta.occupy(trucks_ordered[i])
+                    trucks_ordered.pop(i)
+                    truck_count += 1
+                    continue
+                else:
+                    i += 1
+                    continue
+
+        if(len(trucks_ordered) == 0):
+            finished = True
+                    
+        # Stop condition
+        if(finished and check_no_truck_isleta(isletas)):
+            break
+
         t += t_increment
         
-
+    print(f"Total trucks: {truck_count}")
+    print(f"Total charging power: {total_charging_power} kWh")
     print(f"Tiempo: {t*t_multiplier} h, Potencia total suministrada desde isletas: {total_power_supplied} kW, Potencia total suministrada a camiones: {total_power_supplied_to_trucks} kW")
         
 
