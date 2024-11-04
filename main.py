@@ -86,7 +86,6 @@ def check_no_truck_isleta(isletas):
 
 def main():
     # Construir estructuras
-    [truck1, truck2] = [Truck(100, ['top', 'right'], 50), Truck(200, ['top', 'left'], 100)]
     isletas = []
     isletas.append(GrupoIsleta(5, 250, ['right', 'left', 'top']))
     isletas.append(GrupoIsleta(7, 150, ['right', 'top']))
@@ -94,45 +93,42 @@ def main():
     isletas.append(GrupoIsleta(5, 60, ['left','top','inductive']))
     trucks = get_trucks(200)
     
+    # Variables para unidades de tiempo
     t=0 # Tiempo s
     t_multiplier = 1/3600 # Para pasar de segundos a horas
-    finished=False
+    t_increment = 1 # Incremento de tiempo en segundos
     # Proceso principal
+    finished=False
     #Ordenar por menor capacidad de batería
     trucks_ordered = sorted(trucks, key=lambda x: x.charging_speed, reverse=False)
-    # for t in trucks_ordered:
-    #     print(str(t))
-    t_increment = 1
-    total_power_supplied_to_trucks = 0 #(kW*time)
+   
+    # Variable para contar la energía que acaban recibiendo los camiones. 
+    # Debería ser igual a la suma de las capacidades de los camiones
+    total_power_supplied_to_trucks = 0 
+    # Variable para contar la energía que se suministra desde las isletas
     total_power_supplied = 0
-
+    
+    # Suma de las capacidades de los camiones
     total_charging_power = 0
     for truck in trucks_ordered:
         total_charging_power += truck.battery_capacity
 
-    print(f"Total charging power: {total_charging_power} kWh")
-    print(f"Total trucks: {len(trucks_ordered)}")
-
-    truck_count = 0
-
-    #Rellenar isletas vacías
+    #Rellenar isletas vacías (inicial)
     for isleta in isletas:
-            i = 0
-            while(isleta.get_free_spaces() != 0):
-                if(check_truck_isleta(trucks_ordered[i],isleta)):
-                    isleta.occupy(trucks_ordered[i])
-                    trucks_ordered.pop(i)
-                    truck_count += 1
-                    i += 1
-                    continue
-                else:
-                    i += 1
-                    continue
+        i = 0
+        while(isleta.get_free_spaces() != 0):
+            if(check_truck_isleta(trucks_ordered[i],isleta)):
+                isleta.occupy(trucks_ordered[i])
+                trucks_ordered.pop(i)
+                truck_count += 1
+                i += 1
+                continue
+            else:
+                i += 1
+                continue
 
     # Bucle principal
     while(True):
-        
-        free_space=True
         #Cargar los camiones
         for isleta in isletas:
             trucks_isleta = isleta.get_trucks()
@@ -158,7 +154,7 @@ def main():
             trucks_isleta = trucks_isleta_new
 
         
-        #Rellenar isletas vacías
+        #Rellenar isletas vacías por si se ha liberado algún espacio
         for isleta in isletas:
             i = 0
             while(isleta.get_free_spaces() != 0):
@@ -182,7 +178,6 @@ def main():
 
         t += t_increment
         
-    print(f"Total trucks: {truck_count}")
     print(f"Total charging power: {total_charging_power} kWh")
     print(f"Tiempo: {t*t_multiplier} h, Potencia total suministrada desde isletas: {total_power_supplied} kW, Potencia total suministrada a camiones: {total_power_supplied_to_trucks} kW")
         
