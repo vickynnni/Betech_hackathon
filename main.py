@@ -53,18 +53,21 @@ def get_trucks(n):
         trucks.append(truck)
     return trucks
 
-def check_finished(trucks):
+def check_truck_isleta(truck: Truck, isleta: GrupoIsleta):
+    for port in truck.charging_ports:
+        if port in isleta.charging_ports:
+            return True
+    return False
+
 
 def main():
     # Construir estructuras
     [truck1, truck2] = [Truck(100, ['top', 'right'], 50), Truck(200, ['top', 'left'], 100)]
-    print(truck1)
-    print(truck2)
     isletas = []
-    isletas.append(Isleta(5, 250, ['right', 'left', 'top']))
-    isletas.append(Isleta(7, 150, ['right', 'top']))
-    isletas.append(Isleta(3, 110, ['top', 'inductive']))
-    isletas.append(Isleta(5, 60, ['left','top','inductive']))
+    isletas.append(GrupoIsleta(5, 250, ['right', 'left', 'top']))
+    isletas.append(GrupoIsleta(7, 150, ['right', 'top']))
+    isletas.append(GrupoIsleta(3, 110, ['top', 'inductive']))
+    isletas.append(GrupoIsleta(5, 60, ['left','top','inductive']))
     trucks = get_trucks(10)
     
     t=0 # Tiempo s
@@ -72,16 +75,19 @@ def main():
     finished=False
     # Proceso principal
     #Ordenar por menor capacidad de batería
-    trucks_ordered = sorted(trucks, key=lambda x: x.battery_capacity, reverse=False)
-    print(trucks_ordered)
+    trucks_ordered = sorted(trucks, key=lambda x: x.charging_speed, reverse=False)
+    # for t in trucks_ordered:
+    #     print(str(t))
+    
     while(not finished):
         t += 1
         free_space=True
         for isleta in isletas:
-            if(isleta.get_free_spaces() > 0):
-                if(isleta.occupy(truck)):
-                    break
-            else:
+            if(isleta.get_free_spaces() == 0):
+                continue
+            if(isleta.check_truck_isleta(trucks_ordered[0])):
+                isleta.occupy(trucks_ordered[0])
+                trucks_ordered.pop(0)
                 continue
 
 
