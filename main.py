@@ -120,7 +120,6 @@ def main():
             if(check_truck_isleta(trucks_ordered[i],isleta)):
                 isleta.occupy(trucks_ordered[i])
                 trucks_ordered.pop(i)
-                truck_count += 1
                 i += 1
                 continue
             else:
@@ -163,7 +162,6 @@ def main():
                 if(check_truck_isleta(trucks_ordered[i],isleta)):
                     isleta.occupy(trucks_ordered[i])
                     trucks_ordered.pop(i)
-                    truck_count += 1
                     continue
                 else:
                     i += 1
