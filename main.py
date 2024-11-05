@@ -1,4 +1,5 @@
 import random
+from matplotlib import pyplot as plt
 
 class Truck:
     def __init__(self, battery_capacity, charging_ports, charging_speed):
@@ -84,11 +85,36 @@ def check_no_truck_isleta(isletas):
             return False
     return True
 
-# Higher efficiency score means better truck-isleta match
+def plot_trucks_time(ts, trucks_t):
+    # Plot data
+    plt.plot(ts, trucks_t)
+    plt.xlabel('Time (m)')
+    plt.ylabel('Trucks charged')
+    plt.title('Trucks charged over time')
+    plt.show()
+
+def plot_kw_time(ts, kw_t):
+    # Plot data
+    plt.plot(ts, kw_t)
+    plt.xlabel('Time (m)')
+    plt.ylabel('Power supplied (kW)')
+    plt.title('Power supplied over time')
+    plt.show()
+
+
 def efficiency_score(truck: Truck, isleta: GrupoIsleta):
     inductiva = 0.7 if check_inductiva(truck, isleta) else 1
     ratio_truck_isleta = truck.charging_speed/(isleta.charge_power*inductiva)
-    return (truck.battery_capacity/(truck.charging_speed*inductiva)) - ratio_truck_isleta
+    #print(f"Ratio truck isleta: {ratio_truck_isleta}")
+    if(ratio_truck_isleta == 1):
+        ratio_truck_isleta = 0.99 #Evitamos divisiones por 0
+    if(ratio_truck_isleta > 1):
+        ratio_truck_isleta = ratio_truck_isleta*0.8 #Penalizamos trucks que se pasan de carga
+    if(ratio_truck_isleta < 0.4): #Penalizamos trucks que no se cargan lo suficiente respecto a la isleta
+        ratio_truck_isleta = 0.01
+    score = abs((truck.battery_capacity/(truck.charging_speed)) / (1-ratio_truck_isleta))
+    #print(f"Score: {score}")
+    return score
 
 def fill_isletas(isletas, trucks):
     for isleta in isletas:
@@ -119,7 +145,7 @@ def main():
     
     # Variables para unidades de tiempo
     t=0 # Tiempo s
-    t_multiplier = 1/360 # Para pasar de segundos a horas
+    t_multiplier = 1/60 # Para pasar de segundos a horas
     t_increment = 1 # Incremento de tiempo en segundos
     # Proceso principal
     finished=False
@@ -140,8 +166,14 @@ def main():
     [isletas,trucks] = fill_isletas(isletas, trucks)
     charged_trucks = 0
 
+    # For plotting data
+    ts = []
+    trucks_t = []
+    kw_t = []
+
     # Bucle principal
     while(True):
+        ts.append(t)
         #Cargar los camiones
         for isleta in isletas:
             trucks_isleta = isleta.get_trucks()
@@ -166,7 +198,8 @@ def main():
                     trucks_isleta_new = trucks_isleta.remove(truck)
             trucks_isleta = trucks_isleta_new
 
-        
+        trucks_t.append(charged_trucks)
+        kw_t.append(total_power_supplied)
         #Rellenar isletas vacías por si se ha liberado algún espacio
         [isletas,trucks] = fill_isletas(isletas, trucks)
 
@@ -176,12 +209,13 @@ def main():
         # Stop condition
         if(finished and check_no_truck_isleta(isletas)):
             break
-
         t += t_increment
         
+    
     print(f"Total charging power: {total_charging_power} kWh")
     print(f"Camiones cargados: {charged_trucks}, Tiempo: {t*t_multiplier} h, Potencia total suministrada desde isletas: {total_power_supplied} kW, Potencia total suministrada a camiones: {total_power_supplied_to_trucks} kW")
-        
+    plot_trucks_time(ts, trucks_t)
+    plot_kw_time(ts, kw_t)
 
 
 if __name__ == "__main__":
