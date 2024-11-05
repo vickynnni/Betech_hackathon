@@ -90,17 +90,17 @@ def fill_isletas(isletas, trucks):
     for isleta in isletas:
         i = 0
         while(isleta.get_free_spaces() != 0):
-            if(i>=len(trucks)):
+            if(i>=len(trucks_ordered)):
                     break
-            if(check_truck_isleta(trucks[i],isleta)):
-                isleta.occupy(trucks[i])
-                trucks.pop(i)
+            if(check_truck_isleta(trucks_ordered[i],isleta)):
+                isleta.occupy(trucks_ordered[i])
+                trucks_ordered.pop(i)
                 i += 1
                 continue
             else:
                 i += 1
                 continue
-    return isletas, trucks
+    return isletas, trucks_ordered
 
 def main():
     # Construir estructuras
@@ -131,7 +131,7 @@ def main():
         total_charging_power += truck.battery_capacity
 
     #Rellenar isletas vacías (inicial)
-    fill_isletas(isletas, trucks)
+    [isletas,trucks] = fill_isletas(isletas, trucks)
     charged_trucks = 0
 
     # Bucle principal
@@ -162,7 +162,7 @@ def main():
 
         
         #Rellenar isletas vacías por si se ha liberado algún espacio
-        fill_isletas(isletas, trucks)
+        [isletas,trucks] = fill_isletas(isletas, trucks)
 
         if(len(trucks) == 0):
             finished = True
