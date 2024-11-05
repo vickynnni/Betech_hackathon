@@ -50,9 +50,14 @@ class GrupoIsleta:
     def set_trucks(self,trucks):
         self.trucks = trucks
 
+####################################################################################################################################
+####################################################################################################################################
+####################################################################################################################################
 
 def get_trucks(n):
-    # Crear 100 camiones con valores aleatorios
+    '''
+        Crea y devuelve una lista de 100 camiones con valores aleatorios
+    '''
     #random.seed(2231)
     trucks = []
     for _ in range(n):
@@ -73,19 +78,30 @@ def check_truck_isleta(truck: Truck, isleta: GrupoIsleta):
     return False
 
 def check_inductiva(truck: Truck, isleta: GrupoIsleta):
-    #If the only common charging port is inductive, return True
+    '''
+        Devuelve True si el unico puerto de carga comun es inductivo
+    '''
+    
     intersection = set(truck.charging_ports).intersection(set(isleta.charging_ports))
     if(len(intersection))==1 and 'inductive' in intersection:
         return True
     return False
 
 def check_no_truck_isleta(isletas):
+    '''
+        Devuelve True si todas las isletas estan ocupadas
+    '''
+    
     for isleta in isletas:
         if(isleta.get_free_spaces() < isleta.n_isletas):
             return False
     return True
 
 def plot_trucks_time(ts, trucks_t):
+    '''
+        Plotea el tiempo llevado conforme se va iterando
+    '''
+    
     # Plot data
     plt.subplot(1, 2, 1)  # (rows, columns, index)
     plt.plot(ts, trucks_t)
@@ -94,13 +110,16 @@ def plot_trucks_time(ts, trucks_t):
     plt.title('Trucks charged over time')
 
 def plot_kw_time(ts, kw_t):
+    '''
+        Plotea la energia consumida conforme se va iterando
+    '''
+    
     # Plot data
     plt.subplot(1, 2, 2)  # (rows, columns, index)
     plt.plot(ts, kw_t)
     plt.xlabel('Time (m)')
     plt.ylabel('Power supplied (kW)')
     plt.title('Power supplied over time')
-    
 
 
 def efficiency_score(truck: Truck, isleta: GrupoIsleta):
@@ -220,6 +239,27 @@ def run_simulation(isletas):
     # plt.show()
     return total_charging_power, charged_trucks, t*t_multiplier, total_power_supplied, perdida_energia
 
+def print_results(mean_charging_power, mean_charged_trucks, mean_time, mean_perdida_energia, mean_power_supplied):
+    '''
+        Prints results as specified in the enunciado
+    '''
+    print()
+    print(f"Total charging power: {mean_charging_power} kWh\n")
+    
+    print("#####################")
+    print(f"Camiones cargados: {mean_charged_trucks} camiones \n")
+          
+    print("#####################")
+    print(f"Tiempo: {mean_time} h\n")
+    
+    print("#####################")
+    print(f"kW consumidos: {mean_power_supplied} kW\n")
+    
+    print("#####################")
+    print(f"% Pérdida de energía: {mean_perdida_energia}\n")
+
+
+
 def main():
     # Construir estructuras
     isletas = []
@@ -247,10 +287,8 @@ def main():
     mean_time /= n
     mean_power_supplied /= n
     mean_perdida_energia /= n
-    print()
-    print(f"Total charging power: {mean_charging_power} kWh")
-    print(f"Camiones cargados: {mean_charged_trucks}, Tiempo: {mean_time} h, Potencia total suministrada desde isletas: {mean_power_supplied} kW")
-    print(f"% Pérdida de energía: {mean_perdida_energia}")
+    
+    print_results(mean_charging_power=mean_charging_power, mean_charged_trucks=mean_charged_trucks, mean_time=mean_time, mean_perdida_energia=mean_perdida_energia , mean_power_supplied=mean_power_supplied)
 
 
 if __name__ == "__main__":
