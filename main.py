@@ -26,11 +26,12 @@ class Truck:
         return power_supplied
 
 class GrupoIsleta:
-    def __init__(self, n_isletas, charge_power, charging_ports):
+    def __init__(self, n_isletas, charge_power, charging_ports, is_clean=False):
         self.charge_power = charge_power
         self.charging_ports = charging_ports
         self.trucks = []
         self.n_isletas = n_isletas
+        self.is_clean = False # Nos dice si la isleta sólo se carga con energía limpia o no
 
     def __str__(self):
         return f"Isleta: Charge Power - {self.charge_power}, Charging Ports - {', '.join(self.charging_ports)}, Trucks - {len(self.trucks)}, Free Spaces - {self.get_free_spaces()}"
@@ -89,7 +90,7 @@ def check_inductiva(truck: Truck, isleta: GrupoIsleta):
 
 def check_no_truck_isleta(isletas):
     '''
-        Devuelve True si todas las isletas estan ocupadas
+        Devuelve True si todas las isletas estan vacías
     '''
     
     for isleta in isletas:
@@ -139,8 +140,10 @@ def efficiency_score(truck: Truck, isleta: GrupoIsleta):
     score = abs((truck.battery_capacity/(truck.charging_speed)) / (1-ratio_truck_isleta)) * fits * penalization
     return score
 
-def fill_isletas(isletas, trucks):
+def fill_isletas(isletas, trucks, current_clean_energy):
     for isleta in isletas:
+        if(check_isleta_clean(isleta, current_clean_energy)):
+            continue # Pasamos de la isleta limpia si no tenemos energía limpia
         i = 0
         trucks_ordered = sorted(trucks, key=lambda x: efficiency_score(x,isleta), reverse=True)
         while(isleta.get_free_spaces() != 0):
@@ -148,7 +151,6 @@ def fill_isletas(isletas, trucks):
                     break
             if(check_truck_isleta(trucks_ordered[i],isleta)):
                 isleta.occupy(trucks_ordered[i])
-                #print(f"Truck {i} added to isleta")
                 trucks.remove(trucks_ordered[i])
                 i += 1
                 continue
@@ -157,8 +159,16 @@ def fill_isletas(isletas, trucks):
                 continue
     return isletas, trucks
 
-def run_simulation(isletas):
-    trucks = get_trucks(100)
+
+def check_isleta_clean(isleta, remaining_clean_energy):
+    if(isleta.is_clean):
+        if(remaining_clean_energy <= 0):
+            return True
+    return False
+
+def run_simulation(isletas,trucks=[]):
+    if(len(trucks) == 0):
+        trucks = get_trucks(100)
     
     # Variables para unidades de tiempo
     t=0 # Tiempo s
@@ -166,8 +176,10 @@ def run_simulation(isletas):
     t_increment = 1 # Incremento de tiempo en segundos
     # Proceso principal
     finished=False
-    #Ordenar por menor capacidad de batería
-   
+
+    # Variable para contar cuánta energía limpia nos queda (kWh)
+    total_clean_energy = 500
+    current_clean_energy = total_clean_energy
     # Variable para contar la energía que acaban recibiendo los camiones. 
     # Debería ser igual a la suma de las capacidades de los camiones
     total_power_supplied_to_trucks = 0 
@@ -180,7 +192,7 @@ def run_simulation(isletas):
         total_charging_power += truck.battery_capacity
 
     #Rellenar isletas vacías (inicial)
-    [isletas,trucks] = fill_isletas(isletas, trucks)
+    [isletas,trucks] = fill_isletas(isletas, trucks,current_clean_energy)
     charged_trucks = 0
 
     # For plotting data
@@ -189,36 +201,60 @@ def run_simulation(isletas):
     kw_t = []
 
     # Bucle principal
+    clean_emptied = False
     while(True):
         ts.append(t)
         #Cargar los camiones
+        
         for isleta in isletas:
             trucks_isleta = isleta.get_trucks()
-            trucks_isleta_new = []
+            if(check_isleta_clean(isleta, current_clean_energy)):
+                continue # Pasamos de la isleta limpia si no tenemos energía limpia
+            
             for truck in trucks_isleta:
+                if(not clean_emptied):
+                    use_clean = True # En principio usamos energía limpia
+                else:
+                    use_clean = False
                 max_speed_truck = truck.charging_speed
                 charge_power_isleta = isleta.charge_power
                 inductive = check_inductiva(truck, isleta)
                 effective_charge = max_speed_truck
-
                 total_power_supplied += truck.get_charge(effective_charge, t_increment, t_multiplier)
                 # Calculamos la carga efectiva
                 if(inductive):
                     charge_power_isleta = charge_power_isleta*0.7
+                    use_clean = False
                 effective_charge = min(charge_power_isleta, max_speed_truck)
 
                 truck_charge = truck.get_charge(effective_charge, t_increment, t_multiplier)
+
+                if(use_clean):
+                    if(current_clean_energy >= truck_charge):
+                        current_clean_energy -= truck_charge
+                    else:
+                        truck_charge = current_clean_energy
+                        current_clean_energy = 0
+                        clean_emptied = True
+
                 truck.add_charge(truck_charge)
                 total_power_supplied_to_trucks += truck_charge
                 if(truck.is_full()):
                     charged_trucks += 1
-                    trucks_isleta_new = trucks_isleta.remove(truck)
-            trucks_isleta = trucks_isleta_new
+                    trucks_isleta.remove(truck)
+                
+                elif(clean_emptied):
+                    for clean_trucks in trucks_isleta:
+                        trucks.append(clean_trucks) # Devolvemos el camión a la lista de camiones porque no ha terminado de cargar
+                    trucks_isleta = []
+                    break
 
+            isleta.set_trucks(trucks_isleta)
+    
         trucks_t.append(charged_trucks)
         kw_t.append(total_power_supplied)
         #Rellenar isletas vacías por si se ha liberado algún espacio
-        [isletas,trucks] = fill_isletas(isletas, trucks)
+        [isletas,trucks] = fill_isletas(isletas, trucks,current_clean_energy)
 
         if(len(trucks) == 0):
             finished = True
@@ -228,8 +264,10 @@ def run_simulation(isletas):
             break
         t += t_increment
         
-    
+    clean_energy_used = total_clean_energy - current_clean_energy
+    #total_power_supplied -= clean_energy_used
     perdida_energia = 100*(1-total_power_supplied_to_trucks/total_power_supplied)
+    total_g_CO2 = (total_power_supplied - clean_energy_used)*450
     # print(f"Total charging power: {total_charging_power} kWh")
     # print(f"Camiones cargados: {charged_trucks}, Tiempo: {t*t_multiplier} h, Potencia total suministrada desde isletas: {total_power_supplied} kW, Potencia total suministrada a camiones: {total_power_supplied_to_trucks} kW")
     # print(f"% Pérdida de energía: {100*(1-total_power_supplied_to_trucks/total_power_supplied)}")
@@ -237,9 +275,9 @@ def run_simulation(isletas):
     # plot_kw_time(ts, kw_t)
     # plt.tight_layout()
     # plt.show()
-    return total_charging_power, charged_trucks, t*t_multiplier, total_power_supplied, perdida_energia
+    return total_charging_power, charged_trucks, t*t_multiplier, total_power_supplied, perdida_energia, total_g_CO2
 
-def print_results(mean_charging_power, mean_charged_trucks, mean_time, mean_perdida_energia, mean_power_supplied):
+def print_results(mean_charging_power, mean_charged_trucks, mean_time, mean_perdida_energia, mean_power_supplied, mean_g_CO2):
     '''
         Prints results as specified in the enunciado
     '''
@@ -258,12 +296,15 @@ def print_results(mean_charging_power, mean_charged_trucks, mean_time, mean_perd
     print("#####################")
     print(f"% Pérdida de energía: {mean_perdida_energia}\n")
 
+    print("#####################")
+    print(f"CO2 emitido: {mean_g_CO2/1000} Kg\n")
+
 
 
 def main():
     # Construir estructuras
     isletas = []
-    isletas.append(GrupoIsleta(5, 250, ['right', 'left', 'top']))
+    isletas.append(GrupoIsleta(5, 250, ['right', 'left', 'top'], True))
     isletas.append(GrupoIsleta(7, 150, ['right', 'top']))
     isletas.append(GrupoIsleta(3, 110, ['top', 'inductive']))
     isletas.append(GrupoIsleta(5, 60, ['left','top','inductive']))
@@ -273,22 +314,26 @@ def main():
     mean_time = 0
     mean_power_supplied = 0
     mean_perdida_energia = 0
-    n = 30
+    mean_g_CO2 = 0
+    n = 1
     for i in range(n):
         print('.', end='', flush=True)
-        [total_charging_power, charged_trucks, time, total_power_supplied, perdida_energia] = run_simulation(isletas)
+        [total_charging_power, charged_trucks, time, total_power_supplied, perdida_energia, total_g_CO2] = run_simulation(isletas)
         mean_charging_power += total_charging_power
         mean_charged_trucks += charged_trucks
         mean_time += time
         mean_power_supplied += total_power_supplied
         mean_perdida_energia += perdida_energia
+        mean_g_CO2 += total_g_CO2
+    
     mean_charging_power /= n
     mean_charged_trucks /= n
     mean_time /= n
     mean_power_supplied /= n
     mean_perdida_energia /= n
-    
-    print_results(mean_charging_power=mean_charging_power, mean_charged_trucks=mean_charged_trucks, mean_time=mean_time, mean_perdida_energia=mean_perdida_energia , mean_power_supplied=mean_power_supplied)
+    mean_g_CO2 /= n
+
+    print_results(mean_charging_power=mean_charging_power, mean_charged_trucks=mean_charged_trucks, mean_time=mean_time, mean_perdida_energia=mean_perdida_energia , mean_power_supplied=mean_power_supplied, mean_g_CO2=mean_g_CO2)
 
 
 if __name__ == "__main__":
