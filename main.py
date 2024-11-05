@@ -84,23 +84,29 @@ def check_no_truck_isleta(isletas):
             return False
     return True
 
+# Higher efficiency score means better truck-isleta match
+def efficiency_score(truck: Truck, isleta: GrupoIsleta):
+    inductiva = 0.7 if check_inductiva(truck, isleta) else 1
+    ratio_truck_isleta = truck.charging_speed/(isleta.charge_power*inductiva)
+    return (truck.battery_capacity/(truck.charging_speed*inductiva)) - ratio_truck_isleta
 
 def fill_isletas(isletas, trucks):
-    trucks_ordered = sorted(trucks, key=lambda x: x.battery_capacity/x.charging_speed, reverse=True)
     for isleta in isletas:
         i = 0
+        trucks_ordered = sorted(trucks, key=lambda x: efficiency_score(x,isleta), reverse=True)
         while(isleta.get_free_spaces() != 0):
             if(i>=len(trucks_ordered)):
                     break
             if(check_truck_isleta(trucks_ordered[i],isleta)):
                 isleta.occupy(trucks_ordered[i])
-                trucks_ordered.pop(i)
+                print(f"Truck {i} added to isleta")
+                trucks.remove(trucks_ordered[i])
                 i += 1
                 continue
             else:
                 i += 1
                 continue
-    return isletas, trucks_ordered
+    return isletas, trucks
 
 def main():
     # Construir estructuras
@@ -113,7 +119,7 @@ def main():
     
     # Variables para unidades de tiempo
     t=0 # Tiempo s
-    t_multiplier = 1/3600 # Para pasar de segundos a horas
+    t_multiplier = 1/360 # Para pasar de segundos a horas
     t_increment = 1 # Incremento de tiempo en segundos
     # Proceso principal
     finished=False
