@@ -53,7 +53,7 @@ class GrupoIsleta:
 
 def get_trucks(n):
     # Crear 100 camiones con valores aleatorios
-    random.seed(10)
+    #random.seed(2231)
     trucks = []
     for _ in range(n):
         # Generar valores aleatorios
@@ -87,33 +87,37 @@ def check_no_truck_isleta(isletas):
 
 def plot_trucks_time(ts, trucks_t):
     # Plot data
+    plt.subplot(1, 2, 1)  # (rows, columns, index)
     plt.plot(ts, trucks_t)
     plt.xlabel('Time (m)')
     plt.ylabel('Trucks charged')
     plt.title('Trucks charged over time')
-    plt.show()
 
 def plot_kw_time(ts, kw_t):
     # Plot data
+    plt.subplot(1, 2, 2)  # (rows, columns, index)
     plt.plot(ts, kw_t)
     plt.xlabel('Time (m)')
     plt.ylabel('Power supplied (kW)')
     plt.title('Power supplied over time')
-    plt.show()
+    
 
 
 def efficiency_score(truck: Truck, isleta: GrupoIsleta):
+    fits = 1
+    penalization = 1
+    if(not check_truck_isleta(truck, isleta)): # Los camiones que no pueden cargar en la isleta tienen un score de 0
+        fits = 0
     inductiva = 0.7 if check_inductiva(truck, isleta) else 1
     ratio_truck_isleta = truck.charging_speed/(isleta.charge_power*inductiva)
     #print(f"Ratio truck isleta: {ratio_truck_isleta}")
+    if(ratio_truck_isleta > 1):
+        penalization *= 0.8
     if(ratio_truck_isleta == 1):
         ratio_truck_isleta = 0.99 #Evitamos divisiones por 0
-    if(ratio_truck_isleta > 1):
-        ratio_truck_isleta = ratio_truck_isleta*0.8 #Penalizamos trucks que se pasan de carga
     if(ratio_truck_isleta < 0.4): #Penalizamos trucks que no se cargan lo suficiente respecto a la isleta
-        ratio_truck_isleta = 0.01
-    score = abs((truck.battery_capacity/(truck.charging_speed)) / (1-ratio_truck_isleta))
-    #print(f"Score: {score}")
+        penalization *= 0.8
+    score = abs((truck.battery_capacity/(truck.charging_speed)) / (1-ratio_truck_isleta)) * fits * penalization
     return score
 
 def fill_isletas(isletas, trucks):
@@ -125,7 +129,7 @@ def fill_isletas(isletas, trucks):
                     break
             if(check_truck_isleta(trucks_ordered[i],isleta)):
                 isleta.occupy(trucks_ordered[i])
-                print(f"Truck {i} added to isleta")
+                #print(f"Truck {i} added to isleta")
                 trucks.remove(trucks_ordered[i])
                 i += 1
                 continue
@@ -134,14 +138,8 @@ def fill_isletas(isletas, trucks):
                 continue
     return isletas, trucks
 
-def main():
-    # Construir estructuras
-    isletas = []
-    isletas.append(GrupoIsleta(5, 250, ['right', 'left', 'top']))
-    isletas.append(GrupoIsleta(7, 150, ['right', 'top']))
-    isletas.append(GrupoIsleta(3, 110, ['top', 'inductive']))
-    isletas.append(GrupoIsleta(5, 60, ['left','top','inductive']))
-    trucks = get_trucks(200)
+def run_simulation(isletas):
+    trucks = get_trucks(100)
     
     # Variables para unidades de tiempo
     t=0 # Tiempo s
@@ -212,10 +210,47 @@ def main():
         t += t_increment
         
     
-    print(f"Total charging power: {total_charging_power} kWh")
-    print(f"Camiones cargados: {charged_trucks}, Tiempo: {t*t_multiplier} h, Potencia total suministrada desde isletas: {total_power_supplied} kW, Potencia total suministrada a camiones: {total_power_supplied_to_trucks} kW")
-    plot_trucks_time(ts, trucks_t)
-    plot_kw_time(ts, kw_t)
+    perdida_energia = 100*(1-total_power_supplied_to_trucks/total_power_supplied)
+    # print(f"Total charging power: {total_charging_power} kWh")
+    # print(f"Camiones cargados: {charged_trucks}, Tiempo: {t*t_multiplier} h, Potencia total suministrada desde isletas: {total_power_supplied} kW, Potencia total suministrada a camiones: {total_power_supplied_to_trucks} kW")
+    # print(f"% Pérdida de energía: {100*(1-total_power_supplied_to_trucks/total_power_supplied)}")
+    # plot_trucks_time(ts, trucks_t)
+    # plot_kw_time(ts, kw_t)
+    # plt.tight_layout()
+    # plt.show()
+    return total_charging_power, charged_trucks, t*t_multiplier, total_power_supplied, perdida_energia
+
+def main():
+    # Construir estructuras
+    isletas = []
+    isletas.append(GrupoIsleta(5, 250, ['right', 'left', 'top']))
+    isletas.append(GrupoIsleta(7, 150, ['right', 'top']))
+    isletas.append(GrupoIsleta(3, 110, ['top', 'inductive']))
+    isletas.append(GrupoIsleta(5, 60, ['left','top','inductive']))
+
+    mean_charging_power = 0
+    mean_charged_trucks = 0
+    mean_time = 0
+    mean_power_supplied = 0
+    mean_perdida_energia = 0
+    n = 30
+    for i in range(n):
+        print('.', end='', flush=True)
+        [total_charging_power, charged_trucks, time, total_power_supplied, perdida_energia] = run_simulation(isletas)
+        mean_charging_power += total_charging_power
+        mean_charged_trucks += charged_trucks
+        mean_time += time
+        mean_power_supplied += total_power_supplied
+        mean_perdida_energia += perdida_energia
+    mean_charging_power /= n
+    mean_charged_trucks /= n
+    mean_time /= n
+    mean_power_supplied /= n
+    mean_perdida_energia /= n
+    print()
+    print(f"Total charging power: {mean_charging_power} kWh")
+    print(f"Camiones cargados: {mean_charged_trucks}, Tiempo: {mean_time} h, Potencia total suministrada desde isletas: {mean_power_supplied} kW")
+    print(f"% Pérdida de energía: {mean_perdida_energia}")
 
 
 if __name__ == "__main__":
