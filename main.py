@@ -84,6 +84,23 @@ def check_no_truck_isleta(isletas):
             return False
     return True
 
+
+def fill_isletas(isletas, trucks):
+    for isleta in isletas:
+        i = 0
+        while(isleta.get_free_spaces() != 0):
+            if(i>=len(trucks)):
+                    break
+            if(check_truck_isleta(trucks[i],isleta)):
+                isleta.occupy(trucks[i])
+                trucks.pop(i)
+                i += 1
+                continue
+            else:
+                i += 1
+                continue
+    return isletas, trucks
+
 def main():
     # Construir estructuras
     isletas = []
@@ -114,17 +131,8 @@ def main():
         total_charging_power += truck.battery_capacity
 
     #Rellenar isletas vacías (inicial)
-    for isleta in isletas:
-        i = 0
-        while(isleta.get_free_spaces() != 0):
-            if(check_truck_isleta(trucks_ordered[i],isleta)):
-                isleta.occupy(trucks_ordered[i])
-                trucks_ordered.pop(i)
-                i += 1
-                continue
-            else:
-                i += 1
-                continue
+    fill_isletas(isletas, trucks_ordered)
+    charged_trucks = 0
 
     # Bucle principal
     while(True):
@@ -142,30 +150,19 @@ def main():
                 # Calculamos la carga efectiva
                 if(inductive):
                     charge_power_isleta = charge_power_isleta*0.7
-
                 effective_charge = min(charge_power_isleta, max_speed_truck)
 
                 truck_charge = truck.get_charge(effective_charge, t_increment, t_multiplier)
                 truck.add_charge(truck_charge)
                 total_power_supplied_to_trucks += truck_charge
                 if(truck.is_full()):
+                    charged_trucks += 1
                     trucks_isleta_new = trucks_isleta.remove(truck)
             trucks_isleta = trucks_isleta_new
 
         
         #Rellenar isletas vacías por si se ha liberado algún espacio
-        for isleta in isletas:
-            i = 0
-            while(isleta.get_free_spaces() != 0):
-                if(i>=len(trucks_ordered)):
-                    break
-                if(check_truck_isleta(trucks_ordered[i],isleta)):
-                    isleta.occupy(trucks_ordered[i])
-                    trucks_ordered.pop(i)
-                    continue
-                else:
-                    i += 1
-                    continue
+        fill_isletas(isletas, trucks_ordered)
 
         if(len(trucks_ordered) == 0):
             finished = True
@@ -177,7 +174,7 @@ def main():
         t += t_increment
         
     print(f"Total charging power: {total_charging_power} kWh")
-    print(f"Tiempo: {t*t_multiplier} h, Potencia total suministrada desde isletas: {total_power_supplied} kW, Potencia total suministrada a camiones: {total_power_supplied_to_trucks} kW")
+    print(f"Camiones cargados: {charged_trucks}, Tiempo: {t*t_multiplier} h, Potencia total suministrada desde isletas: {total_power_supplied} kW, Potencia total suministrada a camiones: {total_power_supplied_to_trucks} kW")
         
 
 
