@@ -1,50 +1,80 @@
 import random
 from matplotlib import pyplot as plt
+from typing import List, Tuple
 
 class Truck:
-    def __init__(self, battery_capacity, charging_ports, charging_speed):
-        self.battery_capacity = battery_capacity
-        self.current_battery = 0
-        self.charging_ports = charging_ports  # Listado de puntos de carga, por ejemplo ['top', 'right']
-        self.charging_speed = charging_speed  # Límite de velocidad de carga en kW
+    '''
+        Clase que modela un camion
+    '''
+    def __init__(self, battery_capacity : float, charging_ports : List[str], charging_speed : float):
+        self.battery_capacity = battery_capacity # En kW h
+        self.current_battery = 0                 # Carga actual (empieza a 0 siempre!)
+        self.charging_ports = charging_ports     # Listado de puntos de carga, por ejemplo ['top', 'right']
+        self.charging_speed = charging_speed     # Límite de velocidad de carga en kW
 
     def __str__(self):
         return f"Truck: Battery Capacity - {self.battery_capacity}, Charging Ports - {', '.join(self.charging_ports)}, Charging Speed - {self.charging_speed}"
     
-    def is_full(self):
+    def is_full(self) -> bool:
+        '''
+            Retorna si la bateria esta llena
+        '''
         if(self.current_battery >= self.battery_capacity):
             #print(f"Truck full. Battery capacity: {self.battery_capacity} Total charge: {self.current_battery}")
             return True
         return False
 
-    def add_charge(self, charge_power):
-        self.current_battery += charge_power
+    def add_charge(self, charge_power : float) -> None:
+        '''
+            Carga la bateria si y solo si es menor a 100
+        '''
+        if self.current_battery < 100.0:
+            self.current_battery += charge_power 
+        else:
+            self.current_battery = 100.0
 
-    def get_charge(self, charge_power, time_increment, t_multiplier):
-        power_supplied = charge_power*time_increment*t_multiplier
+    def get_charge(self, charge_power : float, time_increment : int, t_multiplier : float) -> float:
+        '''
+            Retorna cuanto se va a cargar la bateria en el instante de tiempo 'time_increment'.
+            't_multiplier' es el factor de conversion del tiempo a horas
+        '''
+        power_supplied : float = charge_power*time_increment*t_multiplier
         #self.current_battery += power_supplied
         return power_supplied
 
 class GrupoIsleta:
-    def __init__(self, n_isletas, charge_power, charging_ports):
-        self.charge_power = charge_power
-        self.charging_ports = charging_ports
-        self.trucks = []
+    '''
+        Clase que modela un grupo de isletas
+    '''
+    def __init__(self, n_isletas : int, charge_power : float, charging_ports : List[str]):
+        self.charge_power = charge_power # Capacidad de carga de la isleta (en kW)
+        self.charging_ports = charging_ports # Puertos de carga que admite la isleta
+        self.trucks = [] # Camiones en la isleta (len(trucks) == n_isletas)
         self.n_isletas = n_isletas
 
     def __str__(self):
         return f"Isleta: Charge Power - {self.charge_power}, Charging Ports - {', '.join(self.charging_ports)}, Trucks - {len(self.trucks)}, Free Spaces - {self.get_free_spaces()}"
     
-    def get_free_spaces(self):
+    def get_free_spaces(self) -> int:
+        '''
+            Devuelve el numero de isletas libres en el grupo
+        '''
         return self.n_isletas-len(self.trucks)
     
-    def occupy(self,truck: Truck):
+    def occupy(self,truck: Truck) -> bool:
+        '''
+            Anade un camion al grupo. 
+            Devuelve True si se ha podido, False en caso contrario
+        '''
         if(len(self.trucks) < self.n_isletas):
             self.trucks.append(truck)
             return True
         return False
     
-    def get_trucks(self):
+    def get_trucks(self) -> List[Truck]:
+        '''
+            Devuelve los camiones en el grupo de isletas
+        '''
         return self.trucks
     
     def set_trucks(self,trucks):
@@ -54,12 +84,13 @@ class GrupoIsleta:
 ####################################################################################################################################
 ####################################################################################################################################
 
-def get_trucks(n):
+def get_trucks(n : int) -> List[Truck]:
     '''
-        Crea y devuelve una lista de 100 camiones con valores aleatorios
+        Crea y devuelve una lista de 'n' camiones con valores aleatorios
     '''
     #random.seed(2231)
-    trucks = []
+    trucks : List[Truck] = []
+
     for _ in range(n):
         # Generar valores aleatorios
         battery_capacity = random.randint(100, 500)  # Capacidad de 100 a 500 kWh
@@ -69,80 +100,110 @@ def get_trucks(n):
         # Crear y agregar el camión a la lista
         truck = Truck(battery_capacity, charging_ports, charging_speed)
         trucks.append(truck)
+
     return trucks
 
-def check_truck_isleta(truck: Truck, isleta: GrupoIsleta):
+def check_truck_isleta(truck: Truck, isleta: GrupoIsleta) -> bool:
+    '''
+        Comprueba si un camion se puede dockear a una isleta (si y solo si coincide su puerto de carga)
+    '''
     for port in truck.charging_ports:
         if port in isleta.charging_ports:
             return True
     return False
 
-def check_inductiva(truck: Truck, isleta: GrupoIsleta):
+def check_inductiva(truck: Truck, isleta: GrupoIsleta) -> bool:
     '''
-        Devuelve True si el unico puerto de carga comun es inductivo
+        Devuelve si el unico puerto de carga comun es inductivo
     '''
-    
     intersection = set(truck.charging_ports).intersection(set(isleta.charging_ports))
     if(len(intersection))==1 and 'inductive' in intersection:
         return True
     return False
 
-def check_no_truck_isleta(isletas):
+def check_no_truck_isleta(isletas : List[GrupoIsleta]) -> bool:
     '''
-        Devuelve True si todas las isletas estan ocupadas
+        Devuelve si todas las isletas estan ocupadas
     '''
-    
     for isleta in isletas:
         if(isleta.get_free_spaces() < isleta.n_isletas):
             return False
     return True
 
-def plot_trucks_time(ts, trucks_t):
+def plot_trucks_time(ts : List[float], trucks_t : List[int]) -> None:
     '''
-        Plotea el tiempo llevado conforme se va iterando
+        Plotea horas transcurridas vs n° de camiones cargados
     '''
-    
     # Plot data
     plt.subplot(1, 2, 1)  # (rows, columns, index)
     plt.plot(ts, trucks_t)
-    plt.xlabel('Time (m)')
+    plt.xlabel('Time (h)')
     plt.ylabel('Trucks charged')
     plt.title('Trucks charged over time')
 
-def plot_kw_time(ts, kw_t):
+def plot_kw_time(ts : List[float], kw_t : List[float]):
     '''
-        Plotea la energia consumida conforme se va iterando
+        Plotea horas transcurridas vs energia suministrada
     '''
     
     # Plot data
     plt.subplot(1, 2, 2)  # (rows, columns, index)
     plt.plot(ts, kw_t)
-    plt.xlabel('Time (m)')
+    plt.xlabel('Time (h)')
     plt.ylabel('Power supplied (kW)')
     plt.title('Power supplied over time')
 
 
 def efficiency_score(truck: Truck, isleta: GrupoIsleta):
-    fits = 1
+    '''
+        Por cada isleta, les asigna un score a cada truck que indica que tan 'probable' es que se le asigne esa isleta para cargarlo 
+    '''
+    # Valor de penalizacion
     penalization = 1
-    if(not check_truck_isleta(truck, isleta)): # Los camiones que no pueden cargar en la isleta tienen un score de 0
-        fits = 0
+    
+    # Los camiones que no pueden cargar en la isleta tienen un score de 0
+    if(not check_truck_isleta(truck, isleta)):
+        return 0
+    
+    # Capacidad de carga se vera afecta si el puerto carga por inductividad
     inductiva = 0.7 if check_inductiva(truck, isleta) else 1
+    
+    # Cociente entre la velocidad de carga y la capacidad de carga de la isleta 
     ratio_truck_isleta = truck.charging_speed/(isleta.charge_power*inductiva)
-    #print(f"Ratio truck isleta: {ratio_truck_isleta}")
+    
+    # Si la velocidad de carga es mayor a la capacidad de carga de la isleta, el camion no se esta cargando todo lo rapido que podria
     if(ratio_truck_isleta > 1):
         penalization *= 0.8
-    if(ratio_truck_isleta == 1):
-        ratio_truck_isleta = 0.99 #Evitamos divisiones por 0
-    if(ratio_truck_isleta < 0.4): #Penalizamos trucks que no se cargan lo suficiente respecto a la isleta
+
+    # El camion y la isleta comparten velocidad de carga y capacidad de carga
+    elif(ratio_truck_isleta == 1):
+        ratio_truck_isleta = 0.99
+
+    # Si la velocidad de carga es menor a la capacidad de carga de la isleta, el camion esta desaprovechando la isleta 
+    elif(ratio_truck_isleta < 0.4): #Penalizamos trucks que no se cargan lo suficiente respecto a la isleta
         penalization *= 0.8
-    score = abs((truck.battery_capacity/(truck.charging_speed)) / (1-ratio_truck_isleta)) * fits * penalization
+
+    # Tiempo que tarda en cargar el camion
+    charging_time : float = truck.battery_capacity/truck.charging_speed
+    
+    # Score final
+    score = abs(charging_time / (1-ratio_truck_isleta)) * penalization
     return score
 
-def fill_isletas(isletas, trucks):
+def fill_isletas(isletas : List[GrupoIsleta], trucks : List[Truck]) -> Tuple[List[GrupoIsleta], List[Truck]]:
+    '''
+        Para un grupo de camiones, los anade a las isletas disponible en un conjunto de grupos de isletas.
+        Se anaden en base a su efficiency score 
+    '''
     for isleta in isletas:
+        
+        # Para iterar por las isletas disponibles en un grupo
         i = 0
+        
+        # Ordenamos los camiones por su efficiency score
         trucks_ordered = sorted(trucks, key=lambda x: efficiency_score(x,isleta), reverse=True)
+        
+        # Se iteran por todas las isletas libres en el grupo, anadiendo todos los que sean compatibles en orden descendente de efficiency score
         while(isleta.get_free_spaces() != 0):
             if(i>=len(trucks_ordered)):
                     break
@@ -155,27 +216,47 @@ def fill_isletas(isletas, trucks):
             else:
                 i += 1
                 continue
+            
     return isletas, trucks
 
-def run_simulation(isletas):
+def run_simulation(isletas : List[GrupoIsleta]) -> Tuple[float, int, float, float, float]:
+    '''
+        Codigo que ejecuta la simulacion.
+        Al final, devuelve:
+          * total_charging_power 
+          * charged_trucks
+          * t*t_multiplier
+          * total_power_supplied
+          * perdida_energia
+    '''
     trucks = get_trucks(100)
     
     # Variables para unidades de tiempo
-    t=0 # Tiempo s
-    t_multiplier = 1/60 # Para pasar de segundos a horas
-    t_increment = 1 # Incremento de tiempo en segundos
+    
+    # Tiempo (s)
+    t : float = 0
+    
+    # # Para pasar de segundos a la unidad de tiempo escogida
+    t_multiplier : float = 1/60
+
+    # Incremento de tiempo en segundos
+    t_increment : int = 1
+    
     # Proceso principal
     finished=False
+    
+    
     #Ordenar por menor capacidad de batería
    
     # Variable para contar la energía que acaban recibiendo los camiones. 
     # Debería ser igual a la suma de las capacidades de los camiones
-    total_power_supplied_to_trucks = 0 
+    total_power_supplied_to_trucks : float = 0 
+    
     # Variable para contar la energía que se suministra desde las isletas
-    total_power_supplied = 0
+    total_power_supplied : float= 0
     
     # Suma de las capacidades de los camiones
-    total_charging_power = 0
+    total_charging_power : float = 0
     for truck in trucks:
         total_charging_power += truck.battery_capacity
 
@@ -183,7 +264,7 @@ def run_simulation(isletas):
     [isletas,trucks] = fill_isletas(isletas, trucks)
     charged_trucks = 0
 
-    # For plotting data
+    # Variables para plotear
     ts = []
     trucks_t = []
     kw_t = []
@@ -193,8 +274,10 @@ def run_simulation(isletas):
         ts.append(t)
         #Cargar los camiones
         for isleta in isletas:
+
             trucks_isleta = isleta.get_trucks()
             trucks_isleta_new = []
+            
             for truck in trucks_isleta:
                 max_speed_truck = truck.charging_speed
                 charge_power_isleta = isleta.charge_power
@@ -217,6 +300,7 @@ def run_simulation(isletas):
 
         trucks_t.append(charged_trucks)
         kw_t.append(total_power_supplied)
+
         #Rellenar isletas vacías por si se ha liberado algún espacio
         [isletas,trucks] = fill_isletas(isletas, trucks)
 
@@ -274,6 +358,7 @@ def main():
     mean_power_supplied = 0
     mean_perdida_energia = 0
     n = 30
+    
     for i in range(n):
         print('.', end='', flush=True)
         [total_charging_power, charged_trucks, time, total_power_supplied, perdida_energia] = run_simulation(isletas)
