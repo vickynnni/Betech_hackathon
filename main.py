@@ -86,6 +86,7 @@ def check_no_truck_isleta(isletas):
 
 
 def fill_isletas(isletas, trucks):
+    trucks_ordered = sorted(trucks, key=lambda x: x.battery_capacity/x.charging_speed, reverse=True)
     for isleta in isletas:
         i = 0
         while(isleta.get_free_spaces() != 0):
@@ -117,7 +118,6 @@ def main():
     # Proceso principal
     finished=False
     #Ordenar por menor capacidad de batería
-    trucks_ordered = sorted(trucks, key=lambda x: x.battery_capacity/x.charging_speed, reverse=True)
    
     # Variable para contar la energía que acaban recibiendo los camiones. 
     # Debería ser igual a la suma de las capacidades de los camiones
@@ -127,11 +127,11 @@ def main():
     
     # Suma de las capacidades de los camiones
     total_charging_power = 0
-    for truck in trucks_ordered:
+    for truck in trucks:
         total_charging_power += truck.battery_capacity
 
     #Rellenar isletas vacías (inicial)
-    fill_isletas(isletas, trucks_ordered)
+    fill_isletas(isletas, trucks)
     charged_trucks = 0
 
     # Bucle principal
@@ -162,9 +162,9 @@ def main():
 
         
         #Rellenar isletas vacías por si se ha liberado algún espacio
-        fill_isletas(isletas, trucks_ordered)
+        fill_isletas(isletas, trucks)
 
-        if(len(trucks_ordered) == 0):
+        if(len(trucks) == 0):
             finished = True
                     
         # Stop condition
